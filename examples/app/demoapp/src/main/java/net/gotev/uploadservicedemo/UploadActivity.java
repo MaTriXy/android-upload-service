@@ -1,15 +1,16 @@
 package net.gotev.uploadservicedemo;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NavUtils;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
+
+import androidx.annotation.Nullable;
+import androidx.core.app.NavUtils;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import net.gotev.recycleradapter.AdapterItem;
 import net.gotev.recycleradapter.RecyclerAdapter;
@@ -29,9 +30,6 @@ import butterknife.OnClick;
  */
 
 public abstract class UploadActivity extends FilesPickerActivity {
-
-    public static final int MAX_RETRIES = 3;
-    public static final boolean FIXED_LENGTH_STREAMING_MODE = true;
 
     @BindView(R.id.http_method)
     Spinner httpMethod;
@@ -70,7 +68,7 @@ public abstract class UploadActivity extends FilesPickerActivity {
 
         uploadItemsAdapter = new RecyclerAdapter();
         uploadItemUtils = new UploadItemUtils(uploadItemsAdapter);
-        requestItems.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        requestItems.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
         requestItems.setAdapter(uploadItemsAdapter);
 
         AdapterItem emptyItem = getEmptyItem();
@@ -101,7 +99,8 @@ public abstract class UploadActivity extends FilesPickerActivity {
                     @Override
                     public void onValue(String value) {
                         fileParameterName = value;
-                        openFilePicker(false);
+                        //openFilePicker(false); // Bundled file picker
+                        performFileSearch(); // System file picker
                     }
                 });
     }
@@ -184,5 +183,4 @@ public abstract class UploadActivity extends FilesPickerActivity {
     public abstract void onDone(String httpMethod, String serverUrl, UploadItemUtils uploadItemUtils);
 
     public abstract void onInfo();
-
 }

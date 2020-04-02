@@ -2,18 +2,18 @@ package net.gotev.uploadservicedemo;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NavUtils;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.core.app.NavUtils;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import net.gotev.recycleradapter.RecyclerAdapter;
 import net.gotev.uploadservice.ftp.FTPUploadRequest;
-import net.gotev.uploadservice.ftp.UnixPermissions;
 import net.gotev.uploadservicedemo.adapteritems.EmptyItem;
 import net.gotev.uploadservicedemo.adapteritems.UploadItem;
 import net.gotev.uploadservicedemo.dialogs.AddFileParameterNameDialog;
@@ -23,7 +23,6 @@ import net.gotev.uploadservicedemo.utils.UploadItemUtils;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 import butterknife.BindView;
 import butterknife.OnClick;
@@ -69,7 +68,7 @@ public class FTPUploadActivity extends FilesPickerActivity {
 
         uploadItemsAdapter = new RecyclerAdapter();
         uploadItemUtils = new UploadItemUtils(uploadItemsAdapter);
-        requestItems.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+        requestItems.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
         requestItems.setAdapter(uploadItemsAdapter);
 
         ipAddressAndHostnameValidator = new IPAddressAndHostnameValidator();
@@ -83,7 +82,8 @@ public class FTPUploadActivity extends FilesPickerActivity {
                     @Override
                     public void onValue(String value) {
                         remotePath = value;
-                        openFilePicker(false);
+                        //openFilePicker(false);
+                        performFileSearch();
                     }
                 });
     }
@@ -152,15 +152,9 @@ public class FTPUploadActivity extends FilesPickerActivity {
         }
 
         try {
-            final String uploadId = UUID.randomUUID().toString();
-
-            final FTPUploadRequest request = new FTPUploadRequest(this, uploadId, serverUrl.getText().toString(), ftpPort)
-                    .setMaxRetries(UploadActivity.MAX_RETRIES)
-                    .setNotificationConfig(getNotificationConfig(uploadId, R.string.ftp_upload))
-                    .setUsernameAndPassword(ftpUsername.getText().toString(), ftpPassword.getText().toString())
-                    .setCreatedDirectoriesPermissions(new UnixPermissions("777"))
-                    .setSocketTimeout(5000)
-                    .setConnectTimeout(5000);
+            final FTPUploadRequest request = new FTPUploadRequest(this, serverUrl.getText().toString(), ftpPort)
+                    .setNotificationConfig((context, uploadId) -> getNotificationConfig(uploadId, R.string.ftp_upload))
+                    .setUsernameAndPassword(ftpUsername.getText().toString(), ftpPassword.getText().toString());
 
             uploadItemUtils.forEach(new UploadItemUtils.ForEachDelegate() {
 

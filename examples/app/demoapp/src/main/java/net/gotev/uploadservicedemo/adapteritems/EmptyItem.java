@@ -1,12 +1,13 @@
 package net.gotev.uploadservicedemo.adapteritems;
 
 import android.content.Context;
-import android.support.annotation.StringRes;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+
 import net.gotev.recycleradapter.AdapterItem;
-import net.gotev.recycleradapter.RecyclerAdapterNotifier;
 import net.gotev.uploadservicedemo.R;
 import net.gotev.uploadservicedemo.views.ButterKnifeViewHolder;
 
@@ -18,10 +19,17 @@ import butterknife.BindView;
 
 public class EmptyItem extends AdapterItem<EmptyItem.Holder> {
 
-    private @StringRes int text;
+    private @StringRes
+    int text;
 
     public EmptyItem(@StringRes int textResource) {
         text = textResource;
+    }
+
+    @NonNull
+    @Override
+    public String diffingId() {
+        return EmptyItem.class.getName();
     }
 
     @Override
@@ -30,7 +38,7 @@ public class EmptyItem extends AdapterItem<EmptyItem.Holder> {
     }
 
     @Override
-    protected void bind(Holder holder) {
+    public void bind(boolean firstTime, @NonNull Holder holder) {
         Context ctx = holder.textView.getContext();
         holder.textView.setText(ctx.getString(text));
     }
@@ -40,8 +48,8 @@ public class EmptyItem extends AdapterItem<EmptyItem.Holder> {
         @BindView(R.id.textView)
         TextView textView;
 
-        public Holder(View itemView, RecyclerAdapterNotifier adapter) {
-            super(itemView, adapter);
+        public Holder(View itemView) {
+            super(itemView);
         }
     }
 }

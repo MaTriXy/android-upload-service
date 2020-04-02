@@ -2,18 +2,18 @@ package net.gotev.uploadservicedemo;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+
 import net.gotev.recycleradapter.AdapterItem;
-import net.gotev.uploadservice.BinaryUploadRequest;
+import net.gotev.uploadservice.protocols.binary.BinaryUploadRequest;
 import net.gotev.uploadservicedemo.adapteritems.EmptyItem;
 import net.gotev.uploadservicedemo.adapteritems.UploadItem;
 import net.gotev.uploadservicedemo.utils.UploadItemUtils;
 
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * @author Aleksandar Gotev
@@ -41,22 +41,19 @@ public class BinaryUploadActivity extends UploadActivity {
     @Override
     public void onAddFile() {
         fileParameterName = "file";
-        openFilePicker(false);
+        //openFilePicker(false);
+        performFileSearch();
     }
 
     @Override
     public void onDone(String httpMethod, String serverUrl, UploadItemUtils uploadItemUtils) {
 
         try {
-            final String uploadId = UUID.randomUUID().toString();
-
-            final BinaryUploadRequest request = new BinaryUploadRequest(this, uploadId, serverUrl)
+            final BinaryUploadRequest request = new BinaryUploadRequest(this, serverUrl)
                     .setMethod(httpMethod)
-                    .setNotificationConfig(getNotificationConfig(uploadId, R.string.binary_upload))
-                    //.setCustomUserAgent(getUserAgent())
-                    .setMaxRetries(MAX_RETRIES)
-                    .setUsesFixedLengthStreamingMode(FIXED_LENGTH_STREAMING_MODE);
-
+                    .setNotificationConfig((context, uploadId) ->
+                            getNotificationConfig(uploadId, R.string.binary_upload)
+                    );
 
             uploadItemUtils.forEach(new UploadItemUtils.ForEachDelegate() {
 

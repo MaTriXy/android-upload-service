@@ -1,23 +1,25 @@
 package net.gotev.uploadservicedemo;
 
 import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.os.Build;
 import android.os.StrictMode;
 import android.util.Log;
 
 import com.facebook.stetho.Stetho;
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 
-import net.gotev.uploadservice.Logger;
-import net.gotev.uploadservice.UploadService;
+import net.gotev.uploadservice.UploadServiceConfig;
+import net.gotev.uploadservice.data.RetryPolicyConfig;
+import net.gotev.uploadservice.observer.request.GlobalRequestObserver;
 import net.gotev.uploadservice.okhttp.OkHttpStack;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 import static com.facebook.stetho.Stetho.newInitializerBuilder;
@@ -26,6 +28,8 @@ import static com.facebook.stetho.Stetho.newInitializerBuilder;
  * @author gotev (Aleksandar Gotev)
  */
 public class App extends Application {
+
+    public static String CHANNEL = "UploadServiceDemoChannel";
 
     @Override
     public void onCreate() {
@@ -43,17 +47,27 @@ public class App extends Application {
 
         // Set your application namespace to avoid conflicts with other apps
         // using this library
-        UploadService.NAMESPACE = BuildConfig.APPLICATION_ID;
-
-        // Set upload service debug log messages level
-        Logger.setLogLevel(Logger.LogLevel.DEBUG);
+        UploadServiceConfig.initialize(this, App.CHANNEL, BuildConfig.DEBUG);
 
         // Set up the Http Stack to use. If you omit this or comment it, HurlStack will be
         // used by default
-        UploadService.HTTP_STACK = new OkHttpStack(getOkHttpClient());
+        UploadServiceConfig.setHttpStack(new OkHttpStack(getOkHttpClient()));
 
         // setup backoff multiplier
-        UploadService.BACKOFF_MULTIPLIER = 2;
+        UploadServiceConfig.setRetryPolicy(new RetryPolicyConfig(1, 10, 2, 3));
+
+        // Uncomment to experiment Single Notification Handler
+        // UploadServiceConfig.setNotificationHandlerFactory(ExampleSingleNotificationHandler::new);
+
+        new GlobalRequestObserver(this, new GlobalRequestObserverDelegate());
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationChannel channel = new NotificationChannel(CHANNEL, "Upload Service Demo", NotificationManager.IMPORTANCE_LOW);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
     private OkHttpClient getOkHttpClient() {
@@ -64,20 +78,22 @@ public class App extends Application {
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
-
+                .addInterceptor(chain -> {
+                    Request request = chain.request().newBuilder()
+                            .header("User-Agent", UploadServiceConfig.defaultUserAgent)
+                            .build();
+                    return chain.proceed(request);
+                })
                 // you can add your own request interceptors to add authorization headers.
                 // do not modify the body or the http method here, as they are set and managed
                 // internally by Upload Service, and tinkering with them will result in strange,
                 // erroneous and unpredicted behaviors
-                .addNetworkInterceptor(new Interceptor() {
-                    @Override
-                    public Response intercept(Chain chain) throws IOException {
-                        Request.Builder request = chain.request().newBuilder()
-                                .addHeader("myheader", "myvalue")
-                                .addHeader("mysecondheader", "mysecondvalue");
+                .addNetworkInterceptor(chain -> {
+                    Request.Builder request = chain.request().newBuilder()
+                            .addHeader("myheader", "myvalue")
+                            .addHeader("mysecondheader", "mysecondvalue");
 
-                        return chain.proceed(request.build());
-                    }
+                    return chain.proceed(request.build());
                 })
 
                 // open up your Chrome and go to: chrome://inspect
@@ -86,12 +102,7 @@ public class App extends Application {
                 // if you use HttpLoggingInterceptor, be sure to put it always as the last interceptor
                 // in the chain and to not use BODY level logging, otherwise you will get all your
                 // file contents in the log. Logging body is suitable only for small requests.
-                .addInterceptor(new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
-                    @Override
-                    public void log(String message) {
-                        Log.d("OkHttp", message);
-                    }
-                }).setLevel(HttpLoggingInterceptor.Level.HEADERS))
+                .addInterceptor(new HttpLoggingInterceptor(message -> Log.d("OkHttp", message)).setLevel(HttpLoggingInterceptor.Level.HEADERS))
 
                 .cache(null)
                 .build();

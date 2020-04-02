@@ -1,13 +1,12 @@
 package net.gotev.uploadservicedemo.adapteritems;
 
-import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
 import net.gotev.recycleradapter.AdapterItem;
-import net.gotev.recycleradapter.RecyclerAdapterNotifier;
 import net.gotev.uploadservicedemo.R;
 import net.gotev.uploadservicedemo.views.ButterKnifeViewHolder;
 
@@ -27,9 +26,6 @@ public class UploadItem extends AdapterItem<UploadItem.Holder> {
     public static final int TYPE_HEADER = 0;
     public static final int TYPE_PARAMETER = 1;
     public static final int TYPE_FILE = 2;
-
-    private static final String KEY_EVENT = "event";
-    private static final String EVENT_REMOVE = "remove";
 
     private int mType;
     private String mTitle;
@@ -55,18 +51,10 @@ public class UploadItem extends AdapterItem<UploadItem.Holder> {
     }
 
     @Override
-    protected void bind(Holder holder) {
+    public void bind(boolean firstTime, @NonNull UploadItem.Holder holder) {
         holder.image.setImageResource(icons[mType]);
         holder.title.setText(mTitle);
         holder.subtitle.setText(mSubtitle);
-    }
-
-    @Override
-    public boolean onEvent(int position, Bundle data) {
-        if (data != null && EVENT_REMOVE.equals(data.getString(KEY_EVENT)))
-            mDelegate.onRemoveUploadItem(position);
-
-        return false;
     }
 
     public static class Holder extends ButterKnifeViewHolder {
@@ -80,16 +68,17 @@ public class UploadItem extends AdapterItem<UploadItem.Holder> {
         @BindView(R.id.image)
         ImageView image;
 
-        public Holder(View itemView, RecyclerAdapterNotifier adapter) {
-            super(itemView, adapter);
+        public Holder(View itemView) {
+            super(itemView);
         }
 
         @OnClick(R.id.remove)
         public void onRemoveItem() {
-            Bundle data = new Bundle();
-            data.putString(KEY_EVENT, EVENT_REMOVE);
+            UploadItem item = (UploadItem) getAdapterItem();
 
-            sendEvent(data);
+            if (item != null) {
+                item.mDelegate.onRemoveUploadItem(getAdapterPosition());
+            }
         }
     }
 
@@ -110,21 +99,8 @@ public class UploadItem extends AdapterItem<UploadItem.Holder> {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof UploadItem)) return false;
-
-        UploadItem that = (UploadItem) o;
-
-        return that.mTitle.equals(mTitle);
-
-    }
-
-    @Override
-    public int hashCode() {
-        int result = mTitle.hashCode();
-        result = 31 * result + mSubtitle.hashCode();
-        return result;
+    public String diffingId() {
+        return UploadItem.class.getName() + mTitle + mSubtitle;
     }
 
     public int getType() {

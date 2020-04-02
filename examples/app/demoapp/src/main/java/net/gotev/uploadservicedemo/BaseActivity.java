@@ -3,17 +3,22 @@ package net.gotev.uploadservicedemo;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
-import android.support.annotation.LayoutRes;
-import android.support.annotation.StringRes;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 
-import net.gotev.uploadservice.UploadNotificationAction;
-import net.gotev.uploadservice.UploadNotificationConfig;
-import net.gotev.uploadservicedemo.events.NotificationActions;
+import androidx.annotation.LayoutRes;
+import androidx.annotation.StringRes;
+import androidx.appcompat.app.AppCompatActivity;
+
+import net.gotev.uploadservice.data.UploadNotificationAction;
+import net.gotev.uploadservice.data.UploadNotificationConfig;
+import net.gotev.uploadservice.data.UploadNotificationStatusConfig;
+import net.gotev.uploadservice.extensions.ContextExtensionsKt;
+
+import java.util.ArrayList;
 
 import butterknife.ButterKnife;
 
@@ -42,37 +47,72 @@ public class BaseActivity extends AppCompatActivity {
     }
 
     protected UploadNotificationConfig getNotificationConfig(final String uploadId, @StringRes int title) {
-        UploadNotificationConfig config = new UploadNotificationConfig();
-
         PendingIntent clickIntent = PendingIntent.getActivity(
                 this, 1, new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT);
 
-        config.setTitleForAllStatuses(getString(title))
-                .setRingToneEnabled(true)
-                .setClickIntentForAllStatuses(clickIntent)
-                .setClearOnActionForAllStatuses(true);
+        final boolean autoClear = false;
+        final Bitmap largeIcon = null;
+        final boolean clearOnAction = true;
+        final boolean ringToneEnabled = true;
+        final ArrayList<UploadNotificationAction> noActions = new ArrayList<>(1);
 
-        config.getProgress().message = getString(R.string.uploading);
-        config.getProgress().iconResourceID = R.drawable.ic_upload;
-        config.getProgress().iconColorResourceID = Color.BLUE;
-        config.getProgress().actions.add(new UploadNotificationAction(
+        final UploadNotificationAction cancelAction = new UploadNotificationAction(
                 R.drawable.ic_cancelled,
                 getString(R.string.cancel_upload),
-                NotificationActions.getCancelUploadAction(this, 1, uploadId)));
+                ContextExtensionsKt.getCancelUploadIntent(this, uploadId)
+        );
 
-        config.getCompleted().message = getString(R.string.upload_success);
-        config.getCompleted().iconResourceID = R.drawable.ic_upload_success;
-        config.getCompleted().iconColorResourceID = Color.GREEN;
+        final ArrayList<UploadNotificationAction> progressActions = new ArrayList<>(1);
+        progressActions.add(cancelAction);
 
-        config.getError().message = getString(R.string.upload_error);
-        config.getError().iconResourceID = R.drawable.ic_upload_error;
-        config.getError().iconColorResourceID = Color.RED;
+        UploadNotificationStatusConfig progress = new UploadNotificationStatusConfig(
+                getString(title),
+                getString(R.string.uploading),
+                R.drawable.ic_upload,
+                Color.BLUE,
+                largeIcon,
+                clickIntent,
+                progressActions,
+                clearOnAction,
+                autoClear
+        );
 
-        config.getCancelled().message = getString(R.string.upload_cancelled);
-        config.getCancelled().iconResourceID = R.drawable.ic_cancelled;
-        config.getCancelled().iconColorResourceID = Color.YELLOW;
+        UploadNotificationStatusConfig success = new UploadNotificationStatusConfig(
+                getString(title),
+                getString(R.string.upload_success),
+                R.drawable.ic_upload_success,
+                Color.GREEN,
+                largeIcon,
+                clickIntent,
+                noActions,
+                clearOnAction,
+                autoClear
+        );
 
-        return config;
+        UploadNotificationStatusConfig error = new UploadNotificationStatusConfig(
+                getString(title),
+                getString(R.string.upload_error),
+                R.drawable.ic_upload_error,
+                Color.RED,
+                largeIcon,
+                clickIntent,
+                noActions,
+                clearOnAction,
+                autoClear
+        );
+
+        UploadNotificationStatusConfig cancelled = new UploadNotificationStatusConfig(
+                getString(title),
+                getString(R.string.upload_cancelled),
+                R.drawable.ic_cancelled,
+                Color.YELLOW,
+                largeIcon,
+                clickIntent,
+                noActions,
+                clearOnAction
+        );
+
+        return new UploadNotificationConfig(App.CHANNEL, ringToneEnabled, progress, success, error, cancelled);
     }
 
     protected void openBrowser(String url) {
