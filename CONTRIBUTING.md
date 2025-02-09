@@ -1,7 +1,7 @@
 ## Contents
 * [Contributing](#contribute)
+* [Issues](#issues)
 * [Asking for help and bug reports](#help)
-* [Issue readability](#readability)
 
 ### <a name="contribute"></a> Contributing
 * Do you have a new feature in mind?
@@ -9,6 +9,19 @@
 * Have you found a bug?
 
 Contributions are welcome and encouraged! Just fork the project and then send a pull request. Be ready to discuss your code and design decisions.
+
+### <a name="issues"></a> Issues
+Before opening a new issue, search the existing ones. If an issue is closed and you have the same problem, either reopen the issue or create a new one, filling in all the details required in the issue template. If you don't provide those data, you may not have a response in return for lack of relevant context.
+
+Bugs are better explained with a test or a demo project. At least with some working code.
+
+When posting code, logs or stack traces, please use the following Markdown syntax to improve readability:
+<pre>
+```kotlin
+your code, log or stack trace
+```
+</pre>
+
 
 #### Code Style
 Android Upload Service enforces Kotlin standard coding style, using [ktlint](https://ktlint.github.io/).
@@ -37,25 +50,13 @@ To develop Android Upload Service and its core modules, clone the project, then 
 **Working on your first Pull Request?** You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
 
 ### <a name="help"></a> Asking for help and bug reports
-If you need help because you can't make a successful upload to your server, first check the [troubleshooting](https://github.com/gotev/android-upload-service/wiki/Troubleshooting) page on this wiki. If you still haven't solved your issue after that, ask on stack overflow, not here. Ask also "how to.." questions there. The issue tracker here on GitHub is used for library bugs and enhancements. Add this to help others help you:
-* the code you use to make the request, 
-* log from LogCat (enable [debug log](https://github.com/gotev/android-upload-service/wiki/Recipes#logging-))
-* log from your server (replace sensible data)
-* what did you expect
-* what happened instead
-* version of Android
-* version of Android Upload Service
+If you need help because you can't make a successful upload to your server, first check the [troubleshooting procedure](https://github.com/gotev/android-upload-service/wiki/Troubleshooting-Procedure). 
 
-Remember, there's nothing more annoying than:
-> Hi, I've setup everything right by following the instructions, but it doesn't work! Help me!
+Bug reports without relevant details will be closed. Time is precious for everybody.
+
+Good and precise bug reports help improve the library fast and make it easier for everybody.
+
+> Complaints are not useful.
 
 [Here](http://coenjacobs.me/2013/12/06/effective-bug-reports-on-github/) there's a nice blog post about effective bug reports.
-If you already know how to fix the bug, send a pull request.
-
-### <a name="readability"></a> Issue readability
-When posting code, logs or stack traces, please use the following Markdown syntax to improve readability:
-<pre>
-```java
-your code, log or stack trace
-```
-</pre>
+If you already know how to fix the bug, you can directly send a pull request.

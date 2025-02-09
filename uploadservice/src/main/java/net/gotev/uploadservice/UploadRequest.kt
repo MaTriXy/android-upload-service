@@ -1,7 +1,6 @@
 package net.gotev.uploadservice
 
 import android.content.Context
-import android.os.Parcelable
 import androidx.lifecycle.LifecycleOwner
 import net.gotev.uploadservice.data.UploadFile
 import net.gotev.uploadservice.data.UploadNotificationConfig
@@ -9,6 +8,8 @@ import net.gotev.uploadservice.data.UploadTaskParameters
 import net.gotev.uploadservice.extensions.startNewUpload
 import net.gotev.uploadservice.observer.request.RequestObserver
 import net.gotev.uploadservice.observer.request.RequestObserverDelegate
+import net.gotev.uploadservice.persistence.Persistable
+import net.gotev.uploadservice.persistence.PersistableData
 import java.util.ArrayList
 import java.util.UUID
 
@@ -25,12 +26,13 @@ abstract class UploadRequest<B : UploadRequest<B>>
  * @throws IllegalArgumentException if one or more arguments are not valid
  */
 @Throws(IllegalArgumentException::class)
-constructor(protected val context: Context, protected var serverUrl: String) {
+constructor(protected val context: Context, protected var serverUrl: String) : Persistable {
 
     private var uploadId = UUID.randomUUID().toString()
     protected var maxRetries = UploadServiceConfig.retryPolicy.defaultMaxRetries
     protected var autoDeleteSuccessfullyUploadedFiles = false
-    protected var notificationConfig: (context: Context, uploadId: String) -> UploadNotificationConfig = UploadServiceConfig.notificationConfigFactory
+    protected var notificationConfig: (context: Context, uploadId: String) -> UploadNotificationConfig =
+        UploadServiceConfig.notificationConfigFactory
     protected val files = ArrayList<UploadFile>()
 
     /**
@@ -44,6 +46,17 @@ constructor(protected val context: Context, protected var serverUrl: String) {
         require(serverUrl.isNotBlank()) { "Server URL cannot be empty" }
     }
 
+    private val uploadTaskParameters: UploadTaskParameters
+        get() = UploadTaskParameters(
+            taskClass = taskClass.name,
+            id = uploadId,
+            serverUrl = serverUrl,
+            maxRetries = maxRetries,
+            autoDeleteSuccessfullyUploadedFiles = autoDeleteSuccessfullyUploadedFiles,
+            files = files,
+            additionalParameters = getAdditionalParameters()
+        )
+
     /**
      * Start the background file upload service.
      * @return the uploadId string. If you have passed your own uploadId in the constructor, this
@@ -51,16 +64,14 @@ constructor(protected val context: Context, protected var serverUrl: String) {
      * generated uploadId
      */
     open fun startUpload(): String {
+        check(!UploadService.taskList.contains(uploadTaskParameters.id)) {
+            "You have tried to perform startUpload() using the same uploadID of an " +
+                "already running task. You're trying to use the same ID for multiple uploads."
+        }
+
         return context.startNewUpload(
-            taskClass, UploadTaskParameters(
-                uploadId,
-                serverUrl,
-                maxRetries,
-                autoDeleteSuccessfullyUploadedFiles,
-                notificationConfig(context, uploadId),
-                files,
-                getAdditionalParameters()
-            )
+            params = uploadTaskParameters,
+            notificationConfig = notificationConfig(context, uploadId)
         )
     }
 
@@ -78,11 +89,19 @@ constructor(protected val context: Context, protected var serverUrl: String) {
      * @param lifecycleOwner lifecycle to use when subscribing for events
      * @param delegate Observer delegate implementation
      */
-    fun subscribe(context: Context, lifecycleOwner: LifecycleOwner, delegate: RequestObserverDelegate): RequestObserver {
-        return RequestObserver(context, lifecycleOwner, delegate).apply { subscribe(this@UploadRequest) }
+    fun subscribe(
+        context: Context,
+        lifecycleOwner: LifecycleOwner,
+        delegate: RequestObserverDelegate
+    ): RequestObserver {
+        return RequestObserver(
+            context,
+            lifecycleOwner,
+            delegate
+        ).apply { subscribe(this@UploadRequest) }
     }
 
-    protected abstract fun getAdditionalParameters(): Parcelable
+    protected abstract fun getAdditionalParameters(): PersistableData
 
     @Suppress("UNCHECKED_CAST")
     protected fun self(): B {
@@ -135,4 +154,16 @@ constructor(protected val context: Context, protected var serverUrl: String) {
         this.uploadId = uploadID
         return self()
     }
+
+    /**
+     * Gets a [PersistableData] object representing this upload request.
+     *
+     * [UploadNotificationConfig] is not included as it's not persistable. When the upload request
+     * gets recreated using [CreateUploadRequest], [UploadServiceConfig.notificationConfigFactory]
+     * will be used by default to get an [UploadNotificationConfig]. You can override it using
+     * [CreateUploadRequest.setNotificationConfig] method.
+     *
+     * @return [PersistableData] object representing this upload
+     */
+    override fun toPersistableData() = uploadTaskParameters.toPersistableData()
 }

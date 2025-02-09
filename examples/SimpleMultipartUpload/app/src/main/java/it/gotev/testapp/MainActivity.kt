@@ -1,10 +1,15 @@
 package it.gotev.testapp
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.widget.Button
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_main.*
+import androidx.core.content.ContextCompat
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadRequest
 
 class MainActivity : AppCompatActivity() {
@@ -15,11 +20,22 @@ class MainActivity : AppCompatActivity() {
         const val pickFileRequestCode = 42
     }
 
+    private val notificationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // custom logic when the user either allows or disallows notifications
+    }
+
+    private fun checkPostNotificationsPermission() {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        checkPostNotificationsPermission()
 
-        uploadButton.setOnClickListener {
+        findViewById<Button>(R.id.uploadButton).setOnClickListener {
             pickFile()
         }
     }
@@ -31,6 +47,8 @@ class MainActivity : AppCompatActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             // search for all documents available via installed storage providers
             type = "*/*"
+            // obtain permission to read and persistable permission
+            flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
         startActivityForResult(intent, pickFileRequestCode)
     }

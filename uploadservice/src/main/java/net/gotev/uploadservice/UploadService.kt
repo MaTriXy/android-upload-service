@@ -4,8 +4,10 @@ import android.app.Notification
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build.VERSION.SDK_INT
 import android.os.IBinder
 import android.os.PowerManager
+import androidx.core.app.NotificationCompat
 import net.gotev.uploadservice.UploadServiceConfig.threadPool
 import net.gotev.uploadservice.extensions.acquirePartialWakeLock
 import net.gotev.uploadservice.extensions.getUploadTask
@@ -164,6 +166,15 @@ class UploadService : Service() {
         return false
     }
 
+    private fun stopServiceForeground() {
+        if (SDK_INT >= 24) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+    }
+
     /**
      * Called by each task when it is completed (either successfully, with an error or due to
      * user cancellation).
@@ -181,7 +192,7 @@ class UploadService : Service() {
 
         if (UploadServiceConfig.isForegroundService && uploadTasksMap.isEmpty()) {
             UploadServiceLogger.debug(TAG, NA) { "All tasks completed, stopping foreground execution" }
-            stopForeground(true)
+            stopServiceForeground()
             shutdownIfThereArentAnyActiveTasks()
         }
     }
@@ -202,11 +213,24 @@ class UploadService : Service() {
             "Starting UploadService. Debug info: $UploadServiceConfig"
         }
 
+        val builder = NotificationCompat.Builder(this, UploadServiceConfig.defaultNotificationChannel!!)
+            .setSmallIcon(android.R.drawable.ic_menu_upload)
+            .setOngoing(true)
+            .setGroup(UploadServiceConfig.namespace)
+
+        if (SDK_INT >= 31) {
+            builder.foregroundServiceBehavior = Notification.FOREGROUND_SERVICE_IMMEDIATE
+        }
+
+        val notification = builder.build()
+
+        startForeground(UPLOAD_NOTIFICATION_BASE_ID, notification)
+
         val taskCreationParameters = intent.getUploadTaskCreationParameters()
             ?: return shutdownIfThereArentAnyActiveTasks()
 
-        if (uploadTasksMap.containsKey(taskCreationParameters.second.id)) {
-            UploadServiceLogger.error(TAG, taskCreationParameters.second.id) {
+        if (uploadTasksMap.containsKey(taskCreationParameters.params.id)) {
+            UploadServiceLogger.error(TAG, taskCreationParameters.params.id) {
                 "Preventing upload! An upload with the same ID is already in progress. " +
                     "Every upload must have unique ID. Please check your code and fix it!"
             }
@@ -220,7 +244,7 @@ class UploadService : Service() {
         val currentTask = getUploadTask(
             creationParameters = taskCreationParameters,
             notificationId = UPLOAD_NOTIFICATION_BASE_ID + notificationIncrementalId,
-            observers = *taskObservers
+            observers = taskObservers
         ) ?: return shutdownIfThereArentAnyActiveTasks()
 
         clearIdleTimer()
@@ -239,7 +263,7 @@ class UploadService : Service() {
 
         if (UploadServiceConfig.isForegroundService) {
             UploadServiceLogger.debug(TAG, NA) { "Stopping foreground execution" }
-            stopForeground(true)
+            stopServiceForeground()
         }
 
         wakeLock.safeRelease()

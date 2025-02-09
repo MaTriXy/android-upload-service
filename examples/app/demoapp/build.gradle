@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
+    namespace "net.gotev.uploadservicedemo"
     compileSdkVersion target_sdk
 
     defaultConfig {
@@ -14,21 +14,28 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            storeFile file("../keystore")
+            storePassword "password"
+            keyAlias "demoapp"
+            keyPassword "password"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
-
-def butterKnifeVersion = "10.0.0"
-def stethoVersion = "1.4.2"
 
 dependencies {
     // Testing - https://developer.android.com/training/testing/set-up-project
@@ -53,21 +60,14 @@ dependencies {
     // Support
     implementation "androidx.appcompat:appcompat:$androidx_appcompat_version"
     implementation "com.google.android.material:material:$androidx_appcompat_version"
-    implementation "androidx.lifecycle:lifecycle-extensions:$androidx_lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-runtime:$androidx_lifecycle_version"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     // Debugging
-    implementation "com.facebook.stetho:stetho:${stethoVersion}"
-    implementation "com.facebook.stetho:stetho-okhttp3:${stethoVersion}"
     implementation 'com.squareup.okhttp3:logging-interceptor:3.9.1'
 
-    // ButterKnife
-    implementation "com.jakewharton:butterknife:${butterKnifeVersion}"
-    annotationProcessor "com.jakewharton:butterknife-compiler:${butterKnifeVersion}"
-
-    implementation 'com.nononsenseapps:filepicker:4.0.0-beta1'
-    implementation 'net.gotev:recycleradapter:2.8.1'
+    implementation 'net.gotev:recycleradapter:2.10.1'
 
     /*implementation "net.gotev:uploadservice:${libraryVersion}"
     implementation "net.gotev:uploadservice-okhttp:${libraryVersion}"
@@ -77,4 +77,8 @@ dependencies {
     implementation project(':uploadservice')
     implementation project(':uploadservice-okhttp')
     implementation project(':uploadservice-ftp')
+}
+
+task prepareKotlinBuildScriptModel {
+
 }

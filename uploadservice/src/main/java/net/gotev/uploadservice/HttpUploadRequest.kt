@@ -1,13 +1,11 @@
 package net.gotev.uploadservice
 
 import android.content.Context
-import android.os.Parcelable
 import android.util.Base64
 import net.gotev.uploadservice.data.HttpUploadTaskParameters
 import net.gotev.uploadservice.data.NameValue
 import net.gotev.uploadservice.extensions.addHeader
 import net.gotev.uploadservice.extensions.isValidHttpUrl
-import java.util.Locale
 
 /**
  * Represents a generic HTTP upload request.<br></br>
@@ -24,9 +22,7 @@ abstract class HttpUploadRequest<B : HttpUploadRequest<B>>(context: Context, ser
         require(serverUrl.isValidHttpUrl()) { "Specify either http:// or https:// as protocol" }
     }
 
-    override fun getAdditionalParameters(): Parcelable {
-        return httpParams
-    }
+    override fun getAdditionalParameters() = httpParams.toPersistableData()
 
     /**
      * Adds a header to this upload request.
@@ -107,7 +103,7 @@ abstract class HttpUploadRequest<B : HttpUploadRequest<B>>(context: Context, ser
      * @return self instance
      */
     fun setMethod(method: String): B {
-        httpParams.method = method.toUpperCase(Locale.ROOT)
+        httpParams.method = method.uppercase()
         return self()
     }
 

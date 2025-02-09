@@ -1,6 +1,7 @@
 package net.gotev.uploadservice.protocols.binary
 
 import net.gotev.uploadservice.HttpUploadTask
+import net.gotev.uploadservice.extensions.addHeader
 import net.gotev.uploadservice.network.BodyWriter
 
 /**
@@ -11,6 +12,14 @@ class BinaryUploadTask : HttpUploadTask() {
 
     override val bodyLength: Long
         get() = file.size(context)
+
+    override fun performInitialization() {
+        with(httpParams.requestHeaders) {
+            if (none { it.name.lowercase() == "content-type" }) {
+                addHeader("Content-Type", file.contentType(context))
+            }
+        }
+    }
 
     override fun onWriteRequestBody(bodyWriter: BodyWriter) {
         bodyWriter.writeStream(file.stream(context))

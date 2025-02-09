@@ -1,29 +1,17 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'com.jfrog.bintray'
-apply plugin: 'com.github.ben-manes.versions'
+apply plugin: 'kotlin-parcelize'
 apply plugin: "org.jlleitschuh.gradle.ktlint"
-
-Properties properties = new Properties()
-if (project.rootProject.file("local.properties").exists()) {
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-}
-
-// start - module specific overrides of default values written in manifest.gradle
-def bintray_project_name = "android-upload-service-okhttp"
-def library_description = "OkHttp stack implementation for Android Upload Service."
-def library_keywords = ['android', 'upload', 'service', 'okhttp', 'stack']
-// end - module specific overrides
 
 // start - do not modify this if your project is on github
 project.ext {
-    mavDevelopers = [(properties.getProperty("bintray.user")): (maintainer)]
+    mavDevelopers = [(github_username): (maintainer)]
     mavSiteUrl = "https://github.com/${github_username}/${github_repository_name}"
     mavGitUrl = mavSiteUrl + '.git'
     bugTrackerUrl = mavSiteUrl + '/issues/'
-    mavProjectName = bintray_project_name
+    mavProjectName = "android-upload-service-okhttp"
     mavLibraryLicenses = ["Apache-2.0": 'http://www.apache.org/licenses/LICENSE-2.0.txt']
-    mavLibraryDescription = library_description
+    mavLibraryDescription = "OkHttp stack implementation for Android Upload Service."
     mavVersion = library_version
 }
 // end - do not modify this if your project is on github
@@ -32,6 +20,7 @@ group = library_project_group
 version = library_version
 
 android {
+    namespace "net.gotev.uploadservice.okhttp"
     compileSdkVersion target_sdk
 
     defaultConfig {
@@ -40,6 +29,7 @@ android {
         versionCode version_code
         versionName library_version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
     buildTypes {
@@ -50,8 +40,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     lintOptions {
@@ -80,28 +70,10 @@ dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
-    api 'com.squareup.okhttp3:okhttp:4.4.1'
+    api 'com.squareup.okhttp3:okhttp:4.12.0'
     //api "net.gotev:uploadservice:${version}"
     //comment the previous line and uncomment the next line for development (it uses the local lib)
     api project(':uploadservice')
-}
-
-bintray {
-    user = properties.getProperty("bintray.user")
-    key = properties.getProperty("bintray.apikey")
-    publications = ['mavenPublish']
-    pkg {
-        repo = "maven"
-        name = mavProjectName
-        desc = library_description
-        websiteUrl = mavSiteUrl
-        vcsUrl = mavGitUrl
-        issueTrackerUrl = bugTrackerUrl
-        licenses = library_licenses
-        labels = library_keywords
-        publicDownloadNumbers = true
-        publish = true
-    }
 }
 
 apply from: 'https://raw.githubusercontent.com/sky-uk/gradle-maven-plugin/master/gradle-mavenizer.gradle'

@@ -10,6 +10,19 @@ var app = express();
 var UPLOAD_PATH = "./uploads/";
 var SERVER_PORT = 3000;
 
+var storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    fs.mkdirSync(UPLOAD_PATH, { recursive: true })
+    cb(null, UPLOAD_PATH)
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, file.fieldname + '-' + uniqueSuffix)
+  }
+})
+
+var upload = multer({ storage: storage })
+
 var basicAuthUser = {
     username: "test",
     password: "pass"
@@ -45,7 +58,8 @@ function getEndpoints(ipAddress) {
            "HTTP/Multipart (Basic Auth): http://" + ipAddress + ":" + SERVER_PORT + "/upload/multipart-ba\n" +
            "Binary:                      http://" + ipAddress + ":" + SERVER_PORT + "/upload/binary\n" +
            "Binary (Basic Auth):         http://" + ipAddress + ":" + SERVER_PORT + "/upload/binary-ba\n" +
-           "401 Forbidden:               http://" + ipAddress + ":" + SERVER_PORT + "/upload/forbidden\n"
+           "401 Forbidden:               http://" + ipAddress + ":" + SERVER_PORT + "/upload/forbidden\n" +
+           "Validate Content Length:     http://" + ipAddress + ":" + SERVER_PORT + "/upload/validate-content-length\n"
 }
 
 function printAvailableEndpoints() {
@@ -84,46 +98,29 @@ passport.use('basic-admin', new HttpBasicAuth({ realm: 'Upload Service' },
 app.use(passport.initialize());
 var useBasicAuth = passport.authenticate('basic-admin', { session: false });
 
-// configure multer for upload management
-var fileUploadCompleted = false;
-var multerFiles = multer({
-    dest: UPLOAD_PATH,
-    rename: function (fieldname, filename) {
-        return filename;
-    },
-
-    onParseEnd: function(req, next) {
-        printRequestParameters(req);
-
-        next();
-    },
-
-    onFileUploadStart: function (file) {
-        console.log("Started file upload\n  parameter name: " +
-                    file.fieldname + "\n  file name: " +
-                    file.originalname + "\n  mime type: " + file.mimetype);
-    },
-
-    onFileUploadComplete: function (file) {
-        var fullPath = path.resolve(UPLOAD_PATH, file.originalname);
-        console.log("Completed file upload\n  parameter name: " +
-                    file.fieldname + "\n  file name: " +
-                    file.originalname + "\n  mime type: " + file.mimetype +
-                    "\n  in: " + fullPath);
-        fileUploadCompleted = true;
-    }
-});
-
 app.get('/', function(req, res) {
     res.end("Android Upload Service Demo node.js server running!");
 });
 
 var multipartUploadHandler = function(req, res) {
-    if (fileUploadCompleted) {
-        fileUploadCompleted = false;
-        res.header('transfer-encoding', ''); // disable chunked transfer encoding
-        res.end("Upload Ok!");
-    }
+    console.log("\nReceived files");
+    console.log("--------------");
+    console.log(req.files)
+
+    console.log("\nReceived params");
+    console.log("---------------");
+    var params = JSON.stringify(req.body, null, 2);
+    console.log(params);
+    //res.header('transfer-encoding', ''); // disable chunked transfer encoding
+    res.json({
+        success: true,
+        message: "upload completed successfully",
+        data: {
+            files: req.files,
+            params: JSON.parse(params)
+        }
+    });
+    console.log("Upload completed\n\n");
 };
 
 var binaryUploadHandler = function(req, res) {
@@ -137,17 +134,23 @@ var binaryUploadHandler = function(req, res) {
     req.pipe(out);
     req.on('end', function() {
         console.log("Finished binary upload of: " + filename + "\n  in: " + filepath);
-        res.sendStatus(200);
+        res.json({
+            success: true,
+            data: {
+                filename: filename,
+                uploadFilePath: filepath
+            }
+        });
     });
 };
 
 // handle multipart uploads
-app.post('/upload/multipart', multipartReqInterceptor, multerFiles, multipartUploadHandler);
-app.post('/upload/multipart-ba', useBasicAuth, multipartReqInterceptor, multerFiles, multipartUploadHandler);
+app.post('/upload/multipart', multipartReqInterceptor, upload.any(), multipartUploadHandler);
+app.post('/upload/multipart-ba', useBasicAuth, multipartReqInterceptor, upload.any(), multipartUploadHandler);
 
 // handle binary uploads
 app.post('/upload/binary', binaryUploadHandler);
-app.post('/upload/binary-ba', useBasicAuth,binaryUploadHandler);
+app.post('/upload/binary-ba', useBasicAuth, binaryUploadHandler);
 
 // endpoint which returns always 401 and a JSON response in the body
 app.post('/upload/forbidden', function(req, res) {
@@ -158,8 +161,30 @@ app.post('/upload/forbidden', function(req, res) {
     });
 });
 
+app.post('/upload/validate-content-length', function(req, res) {
+    var expected_length = parseInt(req.headers['content-length'], 10);
+    var actual_length = 0;
+
+    req.on('data', function (chunk) {
+        actual_length += chunk.length;
+    });
+
+    req.on('end', function() {
+        var success = expected_length == actual_length;
+        console.log('/upload/validate-content-length -> ' + (success ? 'OK!' : 'KO') + ', expected: ' + expected_length + ', actual: ' + actual_length);
+        res.status(success ? 200 : 400);
+        res.json({
+            success: success,
+            data: {
+                expected: expected_length,
+                actual: actual_length
+            }
+        })
+    });
+});
+
 var server = app.listen(SERVER_PORT, function() {
-    console.log("Web server started. Listening on all interfaces on port " +
+    console.log("Upload server started. Listening on all interfaces on port " +
                 server.address().port);
 
     console.log("\nThe following endpoints are available for upload testing:\n");
